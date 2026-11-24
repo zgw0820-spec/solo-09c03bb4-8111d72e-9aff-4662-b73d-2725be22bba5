@@ -20,6 +20,10 @@
   ul.loads li { padding: .15rem 0; }
   .chain { font-weight: 600; }
   table { border-collapse: collapse; }
+  .scan-table { margin-top: .4rem; font-size: .88rem; }
+  .scan-table th, .scan-table td { border: 1px solid #bbb; padding: .25rem .55rem; text-align: left; }
+  .scan-table th { background: #f4f4f4; }
+  .scans strong { font-size: 1.05rem; }
 </style>
 </head>
 <body>
@@ -79,6 +83,31 @@
   </span></p>
   <p>原因：{{ order.block.reason }}</p>
   {% if order.block.hit_path %}<p>已命中库：<code>{{ order.block.hit_path }}</code></p>{% endif %}
+  {% endif %}
+
+  <p class="scans">提供方符号表扫描次数：
+    <strong>{{ order.provider_scan_count }}</strong>
+    <span class="muted">（本顺序内每个实际装入的私有库最多遍历一遍动态符号表）</span>
+  </p>
+  {% if order.provider_scans %}
+  <table class="scan-table">
+    <thead><tr><th>提供方库</th><th>实际装入路径</th><th>扫描次数</th><th>待核符号版本对</th><th>缺失对</th></tr></thead>
+    <tbody>
+    {% for s in order.provider_scans %}
+      <tr>
+        <td><code>{{ s.name }}</code></td>
+        <td><code>{{ s.path }}</code></td>
+        <td>{{ s.scan_count }}</td>
+        <td>{{ s.checked_pairs }}</td>
+        <td>
+          {% if s.missing_pairs %}
+            {% for m in s.missing_pairs %}<code>{{ m[0] }}@{{ m[1] }}</code>{{ "、" if not loop.last }}{% endfor %}
+          {% else %}<span class="muted">无</span>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
   {% endif %}
 
   {% if order.events %}

@@ -38,6 +38,13 @@ def _show_order(result: dict, mount_root: str) -> None:
         print(f"    原因：{block['reason']}")
         if block["hit_path"]:
             print(f"    已命中库：{block['hit_path']}")
+    print(f"  提供方符号表扫描次数：{result['provider_scan_count']}"
+          "（本顺序内每个实际装入的私有库最多遍历一遍动态符号表）")
+    for scan in result["provider_scans"]:
+        missing = "、".join(f"{s}@{v}" for s, v in scan["missing_pairs"]) or "无"
+        print(f"    · {scan['name']} <- {scan['path']}：扫描 "
+              f"{scan['scan_count']} 次，待核 {scan['checked_pairs']} 对，"
+              f"缺失：{missing}")
     for ev in result["events"]:
         print(f"    · {ev}")
     print()

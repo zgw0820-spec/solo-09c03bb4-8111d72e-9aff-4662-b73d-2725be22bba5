@@ -343,6 +343,40 @@ class ElfFile:
             vers.add(self.verdef.get(idx))  # 下标无定义 -> None（无版本）
         return vers
 
+    def check_provided_pairs(
+        self, wanted: dict[str, set[str | None]]
+    ) -> set[tuple[str, str | None]]:
+        """对本提供方的动态符号表只遍历一遍，批量核查版本化强符号。
+
+        参数 wanted：{符号名: 该符号被要求的版本名集合（可能含 None）}，
+        即“核查索引”里登记在本库名下的待核对（符号, 版本）对。
+        返回其中本库**未**以同名、已定义、GLOBAL 强符号提供的（符号, 版本）
+        对；返回空集合表示全部命中。
+
+        与逐条调用 :meth:`strong_provided_versions` 的判定口径完全一致，
+        区别只在于整个 .dynsym 只扫描一次：先按符号名挑出强定义，再用
+        待核对集合做成员判断。
+        """
+        # 只记录还有待核对版本的符号，命中后即时移除，扫完即得缺失集合。
+        pending = {name: set(versions) for name, versions in wanted.items()
+                   if versions}
+        if not pending:
+            return set()
+        for sym in self.symbols:
+            bucket = pending.get(sym.name)
+            if not bucket or not sym.defined or not sym.strong:
+                continue
+            idx = self._versym_at(sym.index)
+            bucket.discard(self.verdef.get(idx))
+            if not bucket:
+                del pending[sym.name]
+                if not pending:
+                    break
+        missing: set[tuple[str, str | None]] = set()
+        for name, versions in pending.items():
+            missing.update((name, ver) for ver in versions)
+        return missing
+
 
 def is_x86_64_elf(path: str) -> bool:
     """廉价探测：只读文件头，判断是否为 x86-64 ELF。"""
